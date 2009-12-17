@@ -50,7 +50,7 @@ Xonix.timeStep: 50
 *score_shell*Box.borderWidth:	0
 *score_shell*score_msg.label:	Best Xonixers:
 *score_shell*score_headl.label:	Score Level    Date    User ID    Full name
-*score_shell*score_done.label:	Great!
+*score_shell*score_done.label:	Ok
 *score_shell*score_done.background: white
 
 !
@@ -83,24 +83,24 @@ Xonix.timeStep: 50
 !
 ! the game over dialog
 !
-*gameover_shell.title:		Pity!
+*gameover_shell.title:		Game over
 *gameover_box.background:	khaki
 *gameover_box.orientation:	vertical
 *gameover_buttonbox.orientation: horizontal
 *gameover_buttonbox.background:	khaki
 *gameover_buttonbox.borderWidth: 0
-*gameover_msg.label:		Game over, dude!
+*gameover_msg.label:		Game over
 *gameover_msg.font:	-*-new century schoolbook-bold-i-*-*-*-180-*-*-*-*-*-*
 *gameover_msg.borderWidth:	0
 *gameover_msg.foreground:	sienna
 *gameover_msg.background:	khaki
-*gameover_iknow.label:		I know :-(
+*gameover_iknow.label:		Exit
 *gameover_iknow.foreground:	light yellow
 *gameover_iknow.background:	dark orchid
 *gameover_iknow.accelerators:	#augment \
 				<Key>Q: set() notify() unset() \n\
 				<Key>Escape: set() notify() unset()
-*gameover_goon.label:		Once more! :)
+*gameover_goon.label:		Play again
 *gameover_goon.foreground:	light yellow
 *gameover_goon.background:	dark orchid
 *gameover_goon.accelerators:	#augment \
