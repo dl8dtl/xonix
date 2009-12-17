@@ -165,7 +165,7 @@ static int screenno;
 static int depth;
 static Screen *screen;
 static Colormap cmap;
-static int winx, winy;
+/* static int winx, winy; */
 static AppResources resources;
 static int exiting = 0;
 
@@ -173,6 +173,9 @@ static int exiting = 0;
 Display      *dpy;
 Window       canv;
 Dimension    sizex, sizey;
+
+/* Forward declarations */
+extern void Do_New (void); /* xonix.c */
 
 static GC default_gc, empty_gc;
 static Pixmap runner_pm, flyer_pm, eater_pm, filled_pm, empty_pm, way_pm;
@@ -370,7 +373,7 @@ void
 x11_init(int argc, char **argv)
 {
   XGCValues v;
-  XColor c, c1;
+  XColor c1;
   Cursor cursor;
   Pixmap cursor_pm, cursor_mask_pm, colon;
   XColor cursor_fg, cursor_bg;
@@ -528,10 +531,10 @@ x11_init(int argc, char **argv)
   XtGetValues(toplevel, wargs, i);
 
   i = 0;
-  XtSetArg(wargs[i], XtNminWidth, (XtPointer)(unsigned)width); i++;
-  XtSetArg(wargs[i], XtNmaxWidth, (XtPointer)(unsigned)width); i++;
-  XtSetArg(wargs[i], XtNminHeight, (XtPointer)(unsigned)height); i++;
-  XtSetArg(wargs[i], XtNmaxHeight, (XtPointer)(unsigned)height); i++;
+  XtSetArg(wargs[i], XtNminWidth, (XtArgVal)width); i++;
+  XtSetArg(wargs[i], XtNmaxWidth, (XtArgVal)width); i++;
+  XtSetArg(wargs[i], XtNminHeight, (XtArgVal)height); i++;
+  XtSetArg(wargs[i], XtNmaxHeight, (XtArgVal)height); i++;
   XtSetValues(toplevel, wargs, i);
   
   ttab = XtParseTranslationTable(trans_table);
@@ -559,7 +562,7 @@ x11_init(int argc, char **argv)
 
   for(i = 0; i < 10; i++) {
     digit_pms[i] = XCreateBitmapFromData(dpy, XtWindow(statusarea),
-					 digit_bits[i],
+					 (char *)digit_bits[i],
 					 /* assume all digits are same size */
 					 d0_width, d0_height);
   }
@@ -590,7 +593,7 @@ x11_init(int argc, char **argv)
   v.tile = empty_pm;
   empty_gc = XCreateGC(dpy, canv, GCTile|GCFillStyle, &v);
 
-  gMyStatusArea = (char *)malloc(H_STEPS * V_STEPS);
+  gMyStatusArea = (Ptr)malloc(H_STEPS * V_STEPS);
   if(gMyStatusArea == 0)
     XtAppError(app, "No space for status area");
 
@@ -848,8 +851,8 @@ DoAbout(void)
   XtGetValues(toplevel, wargs, i);
     
   i = 0;
-  XtSetArg(wargs[i], XtNx, (XtPointer)(x + 10));  i++;
-  XtSetArg(wargs[i], XtNy, (XtPointer)(y + 10));  i++;
+  XtSetArg(wargs[i], XtNx, (XtArgVal)(x + 10));  i++;
+  XtSetArg(wargs[i], XtNy, (XtArgVal)(y + 10));  i++;
   XtSetValues(about, wargs, i);
 
   gameover_pending = 1;
@@ -1004,7 +1007,7 @@ DisplayHighScore(void)
     /* format a text - fork and exec the processes so we can drop privileges */
     switch( fork() ) {
        case -1:          /* Error */
-         perror(fork);
+         perror("fork failed");
 	 exit(1);
 	 break;
        case 0:           /* Child */
@@ -1119,8 +1122,8 @@ DisplayHighScore(void)
   XtGetValues(toplevel, wargs, i);
 
   i = 0;
-  XtSetArg(wargs[i], XtNx, (XtPointer)(x + 10));  i++;
-  XtSetArg(wargs[i], XtNy, (XtPointer)(y + 100));  i++;
+  XtSetArg(wargs[i], XtNx, (XtArgVal)(x + 10));  i++;
+  XtSetArg(wargs[i], XtNy, (XtArgVal)(y + 100));  i++;
   XtSetValues(score_shell, wargs, i);
 
   gameover_pending = 1;
@@ -1182,8 +1185,8 @@ ExitXonix(int status)
     XtGetValues(toplevel, wargs, i);
     
     i = 0;
-    XtSetArg(wargs[i], XtNx, (XtPointer)(x + 10));  i++;
-    XtSetArg(wargs[i], XtNy, (XtPointer)(y + 10));  i++;
+    XtSetArg(wargs[i], XtNx, (XtArgVal)(x + 10));  i++;
+    XtSetArg(wargs[i], XtNy, (XtArgVal)(y + 10));  i++;
     XtSetValues(gameover_shell, wargs, i);
 
     if(!gameover_pending++)
