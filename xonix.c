@@ -807,7 +807,8 @@ Boolean	SeedFillUp (int xStart, int yStart, Boolean wayToFill)
 				PushSeg (fillStack, sg.y, sg.xr + RATIO, xStart - RATIO, 
 									-sg.dy);
 
-skip:		for (xStart += RATIO; xStart <= sg.xr &&
+skip:
+			for (xStart += RATIO; xStart <= sg.xr &&
 				*(gMyStatusArea + H_STEPS * sg.y + xStart) != ov;
 				xStart += RATIO);
 

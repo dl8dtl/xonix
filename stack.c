@@ -68,7 +68,10 @@ stack *InitStack (void)
 
 	if ((s = (stack *) malloc (sizeof (stack))) == NULL) return NULL;
 
-	if ((s -> bottom = InitMyPoints (INIT_SIZE)) == NULL) return NULL;
+	if ((s -> bottom = InitMyPoints (INIT_SIZE)) == NULL) {
+		free(s);
+		return NULL;
+	}
 
 	s -> size = INIT_SIZE;
 	s -> counter = 0;
@@ -87,7 +90,10 @@ segStack *InitSegmentStack (void)
 
 	if ((s = (segStack *) malloc (sizeof (segStack))) == NULL) return NULL;
 
-	if ((s -> bottom = InitMySegments (INIT_SIZE)) == NULL) return NULL;
+	if ((s -> bottom = InitMySegments (INIT_SIZE)) == NULL) {
+		free(s);
+		return NULL;
+	}
 
 	s -> size = INIT_SIZE;
 	s -> counter = 0;
