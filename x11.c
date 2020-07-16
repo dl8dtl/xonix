@@ -548,9 +548,9 @@ x11_init(int argc, char **argv)
 
   XAllocNamedColor (dpy, cmap, "cadet blue", &c1, &cursor_fg);
   XAllocNamedColor (dpy, cmap, "white", &c1, &cursor_bg);
-  cursor_pm = XCreateBitmapFromData(dpy, canv, xonix_bits,
+  cursor_pm = XCreateBitmapFromData(dpy, canv, (char *)xonix_bits,
 				    xonix_width, xonix_height);
-  cursor_mask_pm = XCreateBitmapFromData(dpy, canv, xonix_mask_bits,
+  cursor_mask_pm = XCreateBitmapFromData(dpy, canv, (char *)xonix_mask_bits,
 				    xonix_mask_width, xonix_mask_height);
   
   cursor = XCreatePixmapCursor(dpy, cursor_pm, cursor_mask_pm,
@@ -566,7 +566,7 @@ x11_init(int argc, char **argv)
 					 /* assume all digits are same size */
 					 d0_width, d0_height);
   }
-  colon = XCreateBitmapFromData(dpy, XtWindow(statusarea), colon_bits,
+  colon = XCreateBitmapFromData(dpy, XtWindow(statusarea), (char *)colon_bits,
 				colon_width, colon_height);
   XtSetArg(wargs[0], XtNbitmap, (XtPointer)colon);
   
@@ -839,6 +839,7 @@ DoAbout(void)
   msg = XtVaCreateManagedWidget("about_msg", labelWidgetClass, box,
 				XtNlabel, about_msg,
 				NULL);
+  (void)msg;
   done = XtVaCreateManagedWidget("about_done", commandWidgetClass,
 				 box,
 				 NULL);
@@ -1011,8 +1012,9 @@ DisplayHighScore(void)
 	 exit(1);
 	 break;
        case 0:           /* Child */
-	 setgid(pw->pw_gid);
-	 setuid(pw->pw_uid);
+	 if (setgid(pw->pw_gid) == -1 ||
+	     setuid(pw->pw_uid) == -1)
+	   perror("setuid/setgid failed");
 	 if((mail = popen(cmd, "w")) != NULL) {
 	   fprintf(mail,
 		   "To: %s (%s)\n"
@@ -1025,7 +1027,8 @@ DisplayHighScore(void)
 		   sp->score, sp->level, tbuf,
 		   gHighScore,
 		   pw->pw_name, fullname);
-	   (void)pclose(mail);
+	   if (pclose(mail) == -1)
+	     perror("could not send the e-mail");
 	   break;
 	 default: /* parent */
 	   break;
@@ -1087,8 +1090,14 @@ DisplayHighScore(void)
     
     tm = localtime(&sp->tstamp);
     strftime(tbuf, 20, "%d-%b-%y", tm);
-    sprintf(line, "%5u %5u  %s %-10.10s %-.64s\n",
-	    sp->score, sp->level, tbuf, sp->login, sp->full);
+    int wr = snprintf(line, sizeof(line) - 1, "%5u %5u  %s %-10.10s %-.64s",
+		      sp->score, sp->level, tbuf, sp->login, sp->full);
+    if(wr < 0)
+      wr = 0;
+    else if((size_t)wr > sizeof(line) - 2)
+      wr = sizeof(line) - 2;
+    line[wr] = '\n';
+    line[wr + 1] = '\0';
     strcat(hugestring, line);
   }
   
@@ -1106,11 +1115,14 @@ DisplayHighScore(void)
 				 NULL);
   msg = XtVaCreateManagedWidget("score_msg", labelWidgetClass, box2,
 				NULL);
+  (void)msg;
   headl = XtVaCreateManagedWidget("score_headl", labelWidgetClass, box2,
 				  NULL);
+  (void)headl;
   area = XtVaCreateManagedWidget("score_area", labelWidgetClass, box2,
 				 XtNlabel, (XtPointer)hugestring,
 				 NULL);
+  (void)area;
   done = XtVaCreateManagedWidget("score_done", commandWidgetClass,
 				 box1,
 				 NULL);
@@ -1158,6 +1170,7 @@ ExitXonix(int status)
 				    NULL);
       msg = XtVaCreateManagedWidget("gameover_msg", labelWidgetClass, box,
 				    NULL);
+      (void)msg;
       buttonbox = XtVaCreateManagedWidget("gameover_buttonbox",
 					  boxWidgetClass, box,
 					  NULL);
