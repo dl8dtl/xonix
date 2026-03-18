@@ -20,7 +20,7 @@ MAKEDIRHIER=	mkdirhier
 #MAKEDIRHIER=	mkdir -p
 
 PROG=		xonix
-XONIXDIR=	$(LIBDIR)/xonix
+XONIXDIR=	/var/games/xonix
 CUTE=		-DSEND_MAIL	# cute feature :-)
 
 XAWLIBS=	-lXaw -lXmu -lXt -lX11 -lXt -lSM -lICE -lXExExt -lXext -lX11

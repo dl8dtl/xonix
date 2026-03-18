@@ -22,7 +22,7 @@ UnsharedLibReferences(XPM,Xpm,$(XPMSRC))
 #define XpmLib     $(XPMLIB)
 
            PROG = xonix
-       XONIXDIR = $(LIBDIR)/xonix
+       XONIXDIR = /var/games/xonix
            CUTE = -DSEND_MAIL	/* cute feature :-) */
 
         DEPLIBS = XawClientDepLibs XpmDepLib

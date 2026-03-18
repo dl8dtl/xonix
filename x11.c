@@ -52,7 +52,10 @@
 #ifdef __unix
 
 #define MAXSCORES 10		/* number of entries in high score table */
-#define PATH_HIGHSCORE "/var/cache/xonix/xonix.scores"
+#ifndef XONIXDIR
+#define XONIXDIR "/var/games/xonix"
+#endif
+#define PATH_HIGHSCORE XONIXDIR "/xonix.scores"
 
 #if defined(__unix) && !defined PATH_RMAIL
 #define PATH_RMAIL "rmail"	/* rely on the $PATH */
