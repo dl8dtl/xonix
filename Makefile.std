@@ -4,9 +4,9 @@
 # Makefile.std,v 1.2 1995/08/28 11:00:39 j Exp
 
 #PROJECTROOT=	/usr
-PROJECTROOT=	/usr/X11R6
+PROJECTROOT=	/usr/local
 
-LIBDIR=		$(PROJECTROOT)/lib/X11
+LIBDIR=		$(PROJECTROOT)/lib
 INCDIR=		$(PROJECTROOT)/include
 BINDIR=		$(PROJECTROOT)/bin
 MANDIR=		$(PROJECTROOT)/man/man1/
@@ -21,15 +21,14 @@ MAKEDIRHIER=	mkdirhier
 
 PROG=		xonix
 XONIXDIR=	/var/games/xonix
-CUTE=		-DSEND_MAIL	# cute feature :-)
+MAIL=		#-DSEND_MAIL	# cute feature :-)
 
-XAWLIBS=	-lXaw -lXmu -lXt -lX11 -lXt -lSM -lICE -lXExExt -lXext -lX11
+XAWLIBS=	-lXaw -lXmu -lXt -lX11 -lXt -lSM -lICE -lXext -lX11
 XPMLIB=		-lXpm
-SYSLIBS=	-lm -lgnumalloc
+SYSLIBS=	-lm
 
-#COPTS=		-O2 -pipe -m486
 COPTS=		-O
-EXTRA_DEFINES=	-DUSE_X11 -DXONIXDIR=\"$(XONIXDIR)\" $(CUTE)
+EXTRA_DEFINES=	-DUSE_X11 -DXONIXDIR=\"$(XONIXDIR)\" $(MAIL)
 INCLUDES=	-I$(INCDIR)
 
 SRCS=		xonix.c x11.c stack.c
