@@ -83,6 +83,10 @@ int 				gLoops;					/* Schleifenzaehler im Animate	*/
 /* Forward-Declarations.                                                    */
 /* ------------------------------------------------------------------------ */
 
+extern int  DrawCompleteInside(void); /* x11.c */
+extern int  DisplayHighScore(void);   /* x11.c */
+extern void ScorePoints (int points); /* x11.c */
+
 void Do_New (void);
 void NewFlyer (void);
 void NewRunner (void);
@@ -739,8 +743,8 @@ Boolean	SeedFillUp (int xStart, int yStart, Boolean wayToFill)
 	segStack *fillStack;
 	mySegment	sg;
 	Boolean runFlag;
-	int l, x1, x2, dy;
-	unsigned char ov, av, nv, wv;
+	int l;
+	unsigned char ov, av=0, nv, wv;
 	int i, j, m, n;
 
 	if ((fillStack = InitSegmentStack ()) == NIL_POINTER)
@@ -803,7 +807,8 @@ Boolean	SeedFillUp (int xStart, int yStart, Boolean wayToFill)
 				PushSeg (fillStack, sg.y, sg.xr + RATIO, xStart - RATIO, 
 									-sg.dy);
 
-skip:		for (xStart += RATIO; xStart <= sg.xr &&
+skip:
+			for (xStart += RATIO; xStart <= sg.xr &&
 				*(gMyStatusArea + H_STEPS * sg.y + xStart) != ov;
 				xStart += RATIO);
 
@@ -911,7 +916,6 @@ skip:		for (xStart += RATIO; xStart <= sg.xr &&
 
 unsigned char NewRunnerPosition (void)
 {
-    int i, j;
     Boolean     bounced;
     unsigned char bouncePartner;
 
@@ -1041,7 +1045,6 @@ void FillNewArea (void)
 	int x1, y1, x2, y2;
 	int percent, oldFillCount;
 	Boolean	wayToFill;
-	double bonusFactor;
 	
 	GWorldEntry ();
 	
@@ -1094,7 +1097,7 @@ void FillNewArea (void)
 
 Boolean NewEaterPosition (void)
 {
-	int	i, j;
+	int	i;
 	int nextX, nextY;
 	Boolean hbFlag, vbFlag, returnFlag;
 	unsigned char bouncePartner;
@@ -1310,7 +1313,7 @@ Boolean VerticalBounceCheck (int x, int y, int size,
     
 Boolean NewFlyerPosition (void)
 {
-    int i, j;
+    int i;
     unsigned char   bouncePartner;
     Boolean     returnFlag, vbFlag, hbFlag;
 

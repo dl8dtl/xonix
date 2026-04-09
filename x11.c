@@ -52,8 +52,10 @@
 #ifdef __unix
 
 #define MAXSCORES 10		/* number of entries in high score table */
-#define PATH_HIGHSCORE XONIXDIR "/scores"
-#define PATH_TEMPSCORE XONIXDIR "/score_tmp"
+#ifndef XONIXDIR
+#define XONIXDIR "/var/games/xonix"
+#endif
+#define PATH_HIGHSCORE XONIXDIR "/xonix.scores"
 
 #if defined(__unix) && !defined PATH_RMAIL
 #define PATH_RMAIL "rmail"	/* rely on the $PATH */
@@ -61,6 +63,7 @@
 
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/file.h>
 #include <pwd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -165,7 +168,7 @@ static int screenno;
 static int depth;
 static Screen *screen;
 static Colormap cmap;
-static int winx, winy;
+/* static int winx, winy; */
 static AppResources resources;
 static int exiting = 0;
 
@@ -173,6 +176,9 @@ static int exiting = 0;
 Display      *dpy;
 Window       canv;
 Dimension    sizex, sizey;
+
+/* Forward declarations */
+extern void Do_New (void); /* xonix.c */
 
 static GC default_gc, empty_gc;
 static Pixmap runner_pm, flyer_pm, eater_pm, filled_pm, empty_pm, way_pm;
@@ -370,7 +376,7 @@ void
 x11_init(int argc, char **argv)
 {
   XGCValues v;
-  XColor c, c1;
+  XColor c1;
   Cursor cursor;
   Pixmap cursor_pm, cursor_mask_pm, colon;
   XColor cursor_fg, cursor_bg;
@@ -528,10 +534,10 @@ x11_init(int argc, char **argv)
   XtGetValues(toplevel, wargs, i);
 
   i = 0;
-  XtSetArg(wargs[i], XtNminWidth, (XtPointer)(unsigned)width); i++;
-  XtSetArg(wargs[i], XtNmaxWidth, (XtPointer)(unsigned)width); i++;
-  XtSetArg(wargs[i], XtNminHeight, (XtPointer)(unsigned)height); i++;
-  XtSetArg(wargs[i], XtNmaxHeight, (XtPointer)(unsigned)height); i++;
+  XtSetArg(wargs[i], XtNminWidth, (XtArgVal)width); i++;
+  XtSetArg(wargs[i], XtNmaxWidth, (XtArgVal)width); i++;
+  XtSetArg(wargs[i], XtNminHeight, (XtArgVal)height); i++;
+  XtSetArg(wargs[i], XtNmaxHeight, (XtArgVal)height); i++;
   XtSetValues(toplevel, wargs, i);
   
   ttab = XtParseTranslationTable(trans_table);
@@ -545,9 +551,9 @@ x11_init(int argc, char **argv)
 
   XAllocNamedColor (dpy, cmap, "cadet blue", &c1, &cursor_fg);
   XAllocNamedColor (dpy, cmap, "white", &c1, &cursor_bg);
-  cursor_pm = XCreateBitmapFromData(dpy, canv, xonix_bits,
+  cursor_pm = XCreateBitmapFromData(dpy, canv, (char *)xonix_bits,
 				    xonix_width, xonix_height);
-  cursor_mask_pm = XCreateBitmapFromData(dpy, canv, xonix_mask_bits,
+  cursor_mask_pm = XCreateBitmapFromData(dpy, canv, (char *)xonix_mask_bits,
 				    xonix_mask_width, xonix_mask_height);
   
   cursor = XCreatePixmapCursor(dpy, cursor_pm, cursor_mask_pm,
@@ -559,11 +565,11 @@ x11_init(int argc, char **argv)
 
   for(i = 0; i < 10; i++) {
     digit_pms[i] = XCreateBitmapFromData(dpy, XtWindow(statusarea),
-					 digit_bits[i],
+					 (char *)digit_bits[i],
 					 /* assume all digits are same size */
 					 d0_width, d0_height);
   }
-  colon = XCreateBitmapFromData(dpy, XtWindow(statusarea), colon_bits,
+  colon = XCreateBitmapFromData(dpy, XtWindow(statusarea), (char *)colon_bits,
 				colon_width, colon_height);
   XtSetArg(wargs[0], XtNbitmap, (XtPointer)colon);
   
@@ -590,7 +596,7 @@ x11_init(int argc, char **argv)
   v.tile = empty_pm;
   empty_gc = XCreateGC(dpy, canv, GCTile|GCFillStyle, &v);
 
-  gMyStatusArea = (char *)malloc(H_STEPS * V_STEPS);
+  gMyStatusArea = (Ptr)malloc(H_STEPS * V_STEPS);
   if(gMyStatusArea == 0)
     XtAppError(app, "No space for status area");
 
@@ -836,6 +842,7 @@ DoAbout(void)
   msg = XtVaCreateManagedWidget("about_msg", labelWidgetClass, box,
 				XtNlabel, about_msg,
 				NULL);
+  (void)msg;
   done = XtVaCreateManagedWidget("about_done", commandWidgetClass,
 				 box,
 				 NULL);
@@ -848,8 +855,8 @@ DoAbout(void)
   XtGetValues(toplevel, wargs, i);
     
   i = 0;
-  XtSetArg(wargs[i], XtNx, (XtPointer)(x + 10));  i++;
-  XtSetArg(wargs[i], XtNy, (XtPointer)(y + 10));  i++;
+  XtSetArg(wargs[i], XtNx, (XtArgVal)(x + 10));  i++;
+  XtSetArg(wargs[i], XtNy, (XtArgVal)(y + 10));  i++;
   XtSetValues(about, wargs, i);
 
   gameover_pending = 1;
@@ -898,7 +905,6 @@ DisplayHighScore(void)
   char *fullname = 0, *cp;
   struct score_rec score_rec[MAXSCORES];
   int i, numentries = 0;
-  char tempname[sizeof(PATH_TEMPSCORE) + 15];
   char hugestring[MAXSCORES * 100];
   
   Widget box1, box2, msg, headl, done, area;
@@ -926,53 +932,62 @@ DisplayHighScore(void)
     }
     else
       fullname = strdup(pw->pw_gecos);
-    if((cp = strchr(fullname, ','))) *cp = 0; /* remove trailing garbage */
+    cp = strchr(fullname, ',');
+    if (cp == fullname) {
+	free(fullname);
+	fullname = strdup("(No name)");
+    }
+    else if (cp != NULL)
+       *cp = 0; /* remove trailing garbage */
   }
   else
     fullname = strdup("(No name)"); /* the strdup() allows to free() it */
-  
+ 
   /* try opening high score file, and read it */
-  if((high = fopen(PATH_HIGHSCORE, "r"))) {
-    for(i = 0; i < 10; i++) {
+  if((high=fopen(PATH_HIGHSCORE, "r")) && (flock(fileno(high),LOCK_EX)==0)){
+    for(i = 0; i < MAXSCORES; i++) {
       char line[100];
 
       if(fgets(line, 100, high) == NULL)
 	break;
-
-      if(sscanf(line, " %u %u%*[\t]%10[^\t]%*[\t]%64[^\t] %ld",
+      
+      if(sscanf(line, "%u%*[\t]%u%*[\t]%10[^\t]%*[\t]%64[^\t]%*[\t]%ld",
 		&score_rec[i].score, &score_rec[i].level,
 		score_rec[i].login, score_rec[i].full,
 		&score_rec[i].tstamp)
-	 != 5) break;		/* mangled entry */
+	 <3 ) break;		/* mangled entry */
     }
     numentries = i;
-    fclose(high);
   }
-  if(numentries)
-    qsort(score_rec, numentries, sizeof(struct score_rec), compare);
-
-  /* make sure the new list will be world-readable */
-  (void)umask(umask(0) & ~0644);
-  sprintf(tempname, "%s.%d", PATH_TEMPSCORE, (int)getpid());
-  if((high = fopen(tempname, "w")) == NULL) {
-    fprintf(stderr, "xonix: cannot rewrite high score file\n");
+  else
+  {
+    if (high != NULL) {
+      fprintf(stderr, "xonix: cannot lock high score file\n");
+      fclose(high);
+    }
+    else
+	fprintf(stderr, "xonix: cannot open high score file\n");
     free(fullname);
     gameover_pending = 0;
     return;
   }
+
+  if(numentries)
+    qsort(score_rec, numentries, sizeof(struct score_rec), compare);
   
-  if(numentries >= MAXSCORES && gHighScore < score_rec[0].score) {
+  if(numentries >= MAXSCORES && gHighScore <= score_rec[0].score) {
     /* sorry, not among top ten */
-    fclose(high);
-    (void)unlink(tempname);
     free(fullname);
+    if(flock(fileno(high),LOCK_UN) != 0)
+      fprintf(stderr, "xonix: cannot unlock high score file\n");
+    fclose(high);
     gameover_pending = 0;
     return;
   }
   
   for(i = 0; i < numentries; i++) {
     /* look where to put entry */
-    if(score_rec[i].score > gHighScore) break;
+    if(score_rec[i].score >= gHighScore) break;
   }
 
 #ifdef SEND_MAIL
@@ -993,19 +1008,34 @@ DisplayHighScore(void)
     tm = localtime(&sp->tstamp);
     strftime(tbuf, 20, "%d-%b-%y", tm);
 
-    if((mail = popen(cmd, "w")) != NULL) {
-      fprintf(mail,
-	      "To: %s (%s)\n"
-	      "Subject: Lost xonix championship\n\n"
-	      "Your previously held first rank in the local xonix score\n"
-	      "table (%u points, level %u, dated %s) has been\n"
-	      "vanished today by me with %u points.\n\n"
-	      "\t\tpitying you\t%s (%s)\n",
-	      sp->login, sp->full,
-	      sp->score, sp->level, tbuf,
-	      gHighScore,
-	      pw->pw_name, fullname);
-      (void)pclose(mail);
+    /* format a text - fork and exec the processes so we can drop privileges */
+    switch( fork() ) {
+       case -1:          /* Error */
+         perror("fork failed");
+	 exit(1);
+	 break;
+       case 0:           /* Child */
+	 if (setgid(pw->pw_gid) == -1 ||
+	     setuid(pw->pw_uid) == -1)
+	   perror("setuid/setgid failed");
+	 if((mail = popen(cmd, "w")) != NULL) {
+	   fprintf(mail,
+		   "To: %s (%s)\n"
+		   "Subject: Lost xonix championship\n\n"
+		   "Your previously held first rank in the local xonix score\n"
+		   "table (%u points, level %u, dated %s) has been\n"
+		   "vanished today by me with %u points.\n\n"
+		   "\t\tpitying you\t%s (%s)\n",
+		   sp->login, sp->full,
+		   sp->score, sp->level, tbuf,
+		   gHighScore,
+		   pw->pw_name, fullname);
+	   if (pclose(mail) == -1)
+	     perror("could not send the e-mail");
+	   break;
+	 default: /* parent */
+	   break;
+      }
     }
   }
   
@@ -1036,16 +1066,23 @@ DisplayHighScore(void)
   score_rec[i].tstamp = time(NULL);
   free(fullname);
 
+  if((high = freopen(PATH_HIGHSCORE, "w",high)) == NULL) {
+    fprintf(stderr, "xonix: cannot reopen high score file\n");
+    /* free(fullname); */
+    gameover_pending = 0;
+    return;
+  }
+
   for(i = 0; i < numentries; i++)
     (void)fprintf(high, "%u\t%u\t%s\t%s\t%ld\n",
 		  score_rec[i].score, score_rec[i].level,
 		  score_rec[i].login, score_rec[i].full,
 		  score_rec[i].tstamp);
+
+  if(flock(fileno(high),LOCK_UN) != 0)
+    fprintf(stderr, "xonix: cannot unlock high score file\n");
   fclose(high);
   
-  if(rename(tempname, PATH_HIGHSCORE))
-    fprintf(stderr, "xonix: cannot install new highscore file\n");
-
   /* create hugestring for highscore label */
   hugestring[0] = 0;
   for(i = 0; i < numentries; i++) {
@@ -1056,8 +1093,14 @@ DisplayHighScore(void)
     
     tm = localtime(&sp->tstamp);
     strftime(tbuf, 20, "%d-%b-%y", tm);
-    sprintf(line, "%5u %5u  %s %-10.10s %-.64s\n",
-	    sp->score, sp->level, tbuf, sp->login, sp->full);
+    int wr = snprintf(line, sizeof(line) - 1, "%5u %5u  %s %-10.10s %-.64s",
+		      sp->score, sp->level, tbuf, sp->login, sp->full);
+    if(wr < 0)
+      wr = 0;
+    else if((size_t)wr > sizeof(line) - 2)
+      wr = sizeof(line) - 2;
+    line[wr] = '\n';
+    line[wr + 1] = '\0';
     strcat(hugestring, line);
   }
   
@@ -1075,11 +1118,14 @@ DisplayHighScore(void)
 				 NULL);
   msg = XtVaCreateManagedWidget("score_msg", labelWidgetClass, box2,
 				NULL);
+  (void)msg;
   headl = XtVaCreateManagedWidget("score_headl", labelWidgetClass, box2,
 				  NULL);
+  (void)headl;
   area = XtVaCreateManagedWidget("score_area", labelWidgetClass, box2,
 				 XtNlabel, (XtPointer)hugestring,
 				 NULL);
+  (void)area;
   done = XtVaCreateManagedWidget("score_done", commandWidgetClass,
 				 box1,
 				 NULL);
@@ -1091,8 +1137,8 @@ DisplayHighScore(void)
   XtGetValues(toplevel, wargs, i);
 
   i = 0;
-  XtSetArg(wargs[i], XtNx, (XtPointer)(x + 10));  i++;
-  XtSetArg(wargs[i], XtNy, (XtPointer)(y + 100));  i++;
+  XtSetArg(wargs[i], XtNx, (XtArgVal)(x + 10));  i++;
+  XtSetArg(wargs[i], XtNy, (XtArgVal)(y + 100));  i++;
   XtSetValues(score_shell, wargs, i);
 
   gameover_pending = 1;
@@ -1127,6 +1173,7 @@ ExitXonix(int status)
 				    NULL);
       msg = XtVaCreateManagedWidget("gameover_msg", labelWidgetClass, box,
 				    NULL);
+      (void)msg;
       buttonbox = XtVaCreateManagedWidget("gameover_buttonbox",
 					  boxWidgetClass, box,
 					  NULL);
@@ -1154,8 +1201,8 @@ ExitXonix(int status)
     XtGetValues(toplevel, wargs, i);
     
     i = 0;
-    XtSetArg(wargs[i], XtNx, (XtPointer)(x + 10));  i++;
-    XtSetArg(wargs[i], XtNy, (XtPointer)(y + 10));  i++;
+    XtSetArg(wargs[i], XtNx, (XtArgVal)(x + 10));  i++;
+    XtSetArg(wargs[i], XtNy, (XtArgVal)(y + 10));  i++;
     XtSetValues(gameover_shell, wargs, i);
 
     if(!gameover_pending++)
